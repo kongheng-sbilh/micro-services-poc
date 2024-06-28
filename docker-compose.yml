@@ -1,0 +1,123 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: admin
+      POSTGRES_DB: keycloakDb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:20.0
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres/keycloakDb
+      KC_DB_USERNAME: admin
+      KC_DB_PASSWORD: admin
+    ports:
+      - "9091:8080"
+    command:
+      - start-dev
+    volumes:
+      - keycloak_data:/opt/jboss/keycloak/standalone/data
+
+  serviceRegistry:
+    image: 'konghengsbilh/service_registry:0.0.1'
+    container_name: serviceRegistry
+    ports:
+      - '8761:8761'
+
+  configServer:
+    image: 'konghengsbilh/config_server:0.0.1'
+    container_name: configServer
+    ports:
+      - '9296:9296'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://serviceRegistry:8761/eureka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9296/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - serviceRegistry
+
+  authenticationService:
+    image: 'konghengsbilh/authentication_service:0.0.1'
+    container_name: authenticationService
+    ports:
+      - '9010:9010'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://serviceRegistry:8761/eureka
+      - CONFIG_SERVER_URL=http://configServer:9296
+      - RESOURCE_SERVER_URI=http://keycloak:8080/realms/sbilh
+    depends_on:
+      configServer:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  cardSystemService:
+    image: 'konghengsbilh/card_management_system_service:0.0.1'
+    container_name: cardSystemService
+    ports:
+      - '9030:9030'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://serviceRegistry:8761/eureka
+      - CONFIG_SERVER_URL=http://configServer:9296
+      - RESOURCE_SERVER_URI=http://keycloak:8080/realms/sbilh
+    depends_on:
+      configServer:
+        condition: service_healthy
+
+  coreBankingService:
+    image: 'konghengsbilh/core_banking_service:0.0.1'
+    container_name: coreBankingService
+    ports:
+      - '9020:9020'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://serviceRegistry:8761/eureka
+      - CONFIG_SERVER_URL=http://configServer:9296
+      - RESOURCE_SERVER_URI=http://keycloak:8080/realms/sbilh
+    depends_on:
+      configServer:
+        condition: service_healthy
+
+  externalPartnershipService:
+    image: 'konghengsbilh/external_partnership_service:0.0.1'
+    container_name: externalPartnershipService
+    ports:
+      - '9090:9090'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://serviceRegistry:8761/eureka
+      - CONFIG_SERVER_URL=http://configServer:9296
+      - RESOURCE_SERVER_URI=http://keycloak:8080/realms/sbilh
+    depends_on:
+      configServer:
+        condition: service_healthy
+
+  cloudGateway:
+    image: 'konghengsbilh/cloud_gateway:0.0.1'
+    container_name: cloudGateway
+    ports:
+      - '9099:9099'
+    environment:
+      - EUREKA_SERVER_ADDRESS=http://serviceRegistry:8761/eureka
+      - CONFIG_SERVER_URL=http://configServer:9296
+      - RESOURCE_SERVER_URI=http://keycloak:8080/realms/sbilh
+      - ISSUER_URI=http://keycloak:8080/realms/sbilh
+    depends_on:
+      configServer:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  keycloak_data:

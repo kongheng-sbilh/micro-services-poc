@@ -1,0 +1,10 @@
+server:
+  port: 9805
+
+spring:
+  application:
+    name: INTEGRATION-SERVICE
+
+ENDPOINT_URL:
+  BENEFICIAL_ACCOUNT: "http://10.10.100.224:7005/SbilhMb/api/v1.0.0/order/sbilh/mb/accountinfor?accountNo="
+  BENEFICIAL_PRIMARY_ACCOUNT: "http://10.10.100.224:7005/SbilhMb/api/v1.0.0/order/sbilh/mb/acclistbymnum?depositType=S&phoneNumber="

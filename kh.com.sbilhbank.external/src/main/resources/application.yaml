@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: EXTERNAL-PARTNERSHIP-SERVICE
+
+server:
+  port: 9090
